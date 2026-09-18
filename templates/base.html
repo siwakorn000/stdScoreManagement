@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ระบบจัดการคะแนน</title>
+<style>
+    /* แก้ไขส่วน body ให้ความสูงขยายตามเนื้อหา และอนุญาตให้ scroll ได้ */
+    body { 
+        font-family: 'Segoe UI', Tahoma, sans-serif; 
+        margin: 0; 
+        padding: 0; 
+        background-color: #f4f4f4; 
+        min-height: 100vh; /* ใช้ min-height แทน height */
+        overflow-y: auto; /* อนุญาตให้เลื่อนขึ้นลงได้ */
+    }
+    
+    /* Top Bar (ยังคงเหมือนเดิม position: sticky จะช่วยให้แถบติดอยู่ด้านบนตอนเลื่อน) */
+    .topbar { 
+        background-color: #4db6ac; 
+        color: white; 
+        padding: 15px 20px; 
+        display: flex; 
+        align-items: center; 
+        font-size: 20px; 
+        font-weight: bold; 
+        position: sticky; 
+        top: 0; 
+        z-index: 1000; 
+    }
+    
+    /* Sidebar (ยังคงเหมือนเดิม) */
+    .sidebar { 
+        height: 100%; 
+        width: 0; 
+        position: fixed; 
+        z-index: 1001; 
+        top: 0; 
+        left: 0; 
+        background-color: #ffffff; 
+        overflow-x: hidden; 
+        transition: 0.3s; 
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1); 
+        padding-top: 60px; 
+    }
+    .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 18px; color: #333; display: block; transition: 0.3s; border-bottom: 1px solid #eee; }
+    .sidebar a:hover { background-color: #f0f0f0; }
+    .sidebar a.active { background-color: #e0e0e0; font-weight: bold; }
+    .close-btn { position: absolute; top: 10px; right: 20px; font-size: 24px; cursor: pointer; color: #888; }
+    
+    /* Main Content */
+    .main-content { 
+        padding: 20px; 
+        transition: margin-left .3s; 
+        padding-bottom: 50px; /* เผื่อพื้นที่ด้านล่างไว้เล็กน้อยกันเนื้อหาชิดขอบเกินไป */
+    }
+</style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div id="mySidebar" class="sidebar">
+        <span class="close-btn" onclick="closeSidebar()">&times;</span>
+        <a href="{{ url_for('index') }}" class="{% if active_menu == 'home' %}active{% endif %}">หน้าแรก</a>
+        <a href="{{ url_for('department', dept_id=1) }}" class="{% if active_menu == 'table' %}active{% endif %}">ตารางคะแนน</a>
+        
+        {% if role == 'teacher' %}
+            <a href="{{ url_for('settings') }}" class="{% if active_menu == 'settings' %}active{% endif %}">การตั้งค่าบัญชี</a>
+            <a href="{{ url_for('role_selection') }}" style="color: red;">ออกจากระบบ</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">เข้าสู่ระบบอาจารย์</a>
+        {% endif %}
+    </div>
+
+    <!-- Topbar -->
+    <div class="topbar">
+        <span class="menu-btn" onclick="openSidebar()">☰</span>
+        <span>ระบบจัดการคะแนน</span>
+    </div>
+
+    <!-- Area for sub-pages -->
+    <div class="main-content" id="main">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        function openSidebar() { document.getElementById("mySidebar").style.width = "250px"; }
+        function closeSidebar() { document.getElementById("mySidebar").style.width = "0"; }
+    </script>
+</body>
+</html>

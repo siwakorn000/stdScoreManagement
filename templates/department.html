@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    /* Level Tabs */
+    .level-tabs { display: flex; background-color: #e0e0e0; border-radius: 8px 8px 0 0; overflow: hidden; }
+    .level-tab { flex: 1; padding: 12px; text-align: center; text-decoration: none; color: #555; font-weight: bold; }
+    .level-tab.active { background-color: white; color: #333; border-top: 3px solid #4db6ac; }
+    
+    .content-box { background: white; padding: 20px; border-radius: 0 0 8px 8px; min-height: 300px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+    th { background-color: #a8e6cf; }
+    .pass { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+
+    /* Modal Style */
+    .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+    .modal-content { background-color: #fff; margin: 5% auto; padding: 20px; border-radius: 8px; width: 400px; max-height: 85vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .close { float: right; font-size: 24px; cursor: pointer; }
+    .form-group { margin-bottom: 15px; text-align: left; }
+    .form-group input, .form-group select { width: 90%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .edit-btn { background-color: #4db6ac; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+    .edit-btn:hover { opacity: 0.9; }
+</style>
+
+<!-- แท็บเลือกชั้นปี -->
+<div class="level-tabs">
+    <a href="?level=1" class="level-tab {% if level == 1 %}active{% endif %}">ปวช. 1</a>
+    <a href="?level=2" class="level-tab {% if level == 2 %}active{% endif %}">ปวช. 2</a>
+    <a href="?level=3" class="level-tab {% if level == 3 %}active{% endif %}">ปวช. 3</a>
+</div>
+
+<div class="content-box">
+    <h3 style="color: #4db6ac;">ปวช. {{ level }}</h3>
+    
+    {% if role == 'teacher' %}
+        <div style="margin-bottom: 15px;">
+            <button class="edit-btn" onclick="openModal('editModal')">✏️ จัดการคะแนน</button>
+            <button class="edit-btn" onclick="openModal('studentModal')" style="background-color: #64b5f6;">👨‍🎓 จัดการนักศึกษา</button>
+            <button class="edit-btn" onclick="openModal('subjectModal')" style="background-color: #ffb74d;">📚 จัดการรายวิชา</button>
+        </div>
+    {% endif %}
+    
+    <div style="overflow-x:auto;">
+        <table>
+            <tr>
+                <th>รหัสนักศึกษา</th>
+                <th>ชื่อ-นามสกุล</th>
+                {% for subj in subjects %}<th>{{ subj.subjName }}</th>{% endfor %}
+                <th>เฉลี่ย</th>
+            </tr>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.stdId }}</td>
+                <td>{{ student.stdFName }} {{ student.stdLName }}</td>
+                {% for subj in subjects %}
+                    {% set score = student.scores.get(subj.subjId, '-') %}
+                    <td>
+                        {% if score != '-' %}
+                            {{ score }} / 
+                            {% if score|int > 49 %}<span class="pass">ผ่าน</span>{% else %}<span class="fail">ไม่ผ่าน</span>{% endif %}
+                        {% else %}-{% endif %}
+                    </td>
+                {% endfor %}
+                <td>{{ student.avgSc | round(2) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="100%">ไม่มีข้อมูลนักศึกษาในชั้นปีนี้</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<!-- ส่วน Modals สำหรับอาจารย์ -->
+{% if role == 'teacher' %}
+<!-- Modal อัปเดตคะแนน -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('editModal')">&times;</span>
+        <h3 style="color: #4db6ac; margin-top: 0;">อัปเดตคะแนน</h3>
+        
+        <div class="form-group">
+            <label>ค้นหานักศึกษา (พิมพ์ชื่อ):</label>
+            <input type="text" id="studentSearch" list="studentList" placeholder="">
+            <datalist id="studentList">
+                {% for student in students %}
+                <option value="{{ student.stdId }} - {{ student.stdFName }} {{ student.stdLName }}"></option>
+                {% endfor %}
+            </datalist>
+        </div>
+
+        <div id="subjectInputs">
+            {% for subj in subjects %}
+            <div class="form-group">
+                <label>{{ subj.subjName }} (0-100):</label>
+                <input type="number" id="input_{{ subj.subjId }}" min="0" max="100">
+            </div>
+            {% endfor %}
+        </div>
+
+        <button class="edit-btn" onclick="saveData()" style="width: 100%;">บันทึกคะแนน</button>
+    </div>
+</div>
+
+<!-- Modal จัดการนักศึกษา -->
+<div id="studentModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('studentModal')">&times;</span>
+        <h3 style="color: #64b5f6;">เพิ่มนักศึกษา</h3>
+        <div class="form-group"><input type="text" id="newStdId" placeholder="รหัสนักศึกษา"></div>
+        <div class="form-group"><input type="text" id="newStdFName" placeholder="ชื่อ"></div>
+        <div class="form-group"><input type="text" id="newStdLName" placeholder="นามสกุล"></div>
+        <div class="form-group"><input type="number" id="newStdDept" placeholder="สาขา " value="{{ dept_id }}"></div>
+        <div class="form-group"><input type="number" id="newStdLevel" placeholder="ชั้นปี " value="{{ level }}"></div>
+        <button class="edit-btn" style="background-color: #64b5f6; width: 100%;" onclick="manageData('student', 'add')">เพิ่มนักศึกษา</button>
+        
+        <hr style="margin: 20px 0;">
+        <h3 style="color: #e57373;">ลบนักศึกษา</h3>
+        <div class="form-group">
+            <select id="delStdId" style="width: 95%; padding: 8px;">
+                <option value="">-- เลือกรหัสนักศึกษาที่จะลบ --</option>
+                {% for student in students %}<option value="{{ student.stdId }}">{{ student.stdId }} - {{ student.stdFName }}</option>{% endfor %}
+            </select>
+        </div>
+        <button class="edit-btn" style="background-color: #e57373; width: 100%;" onclick="manageData('student', 'delete')">ลบนักศึกษา</button>
+    </div>
+</div>
+
+<!-- Modal จัดการรายวิชา -->
+<div id="subjectModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('subjectModal')">&times;</span>
+        <h3 style="color: #ffb74d;">เพิ่มรายวิชา</h3>
+        <div class="form-group"><input type="text" id="newSubjName" placeholder="ชื่อวิชา"></div>
+        <div class="form-group"><input type="number" id="newSubjDept" placeholder="สาขา " value="{{ dept_id }}"></div>
+        <div class="form-group"><input type="number" id="newSubjLevel" placeholder="ชั้นปี" value="{{ level }}"></div>
+        <button class="edit-btn" style="background-color: #ffb74d; width: 100%;" onclick="manageData('subject', 'add')">เพิ่มรายวิชา</button>
+        
+        <hr style="margin: 20px 0;">
+        <h3 style="color: #e57373;">ลบรายวิชา</h3>
+        <div class="form-group">
+            <select id="delSubjId" style="width: 95%; padding: 8px;">
+                <option value="">-- เลือกวิชาที่จะลบ --</option>
+                {% for subj in subjects %}<option value="{{ subj.subjId }}">{{ subj.subjName }}</option>{% endfor %}
+            </select>
+        </div>
+        <button class="edit-btn" style="background-color: #e57373; width: 100%;" onclick="manageData('subject', 'delete')">ลบรายวิชา</button>
+    </div>
+</div>
+{% endif %}
+
+<!-- ฟังก์ชันเปิด-ปิด Modal (วางอยู่นอกเงื่อนไขเพื่อให้โหลดแน่นอน ป้องกัน Error) -->
+<script>
+    function openModal(modalId) { 
+        let targetModal = document.getElementById(modalId);
+        if (targetModal) {
+            targetModal.style.display = 'block'; 
+        }
+    }
+    
+    function closeModal(modalId) { 
+        let targetModal = document.getElementById(modalId);
+        if (targetModal) {
+            targetModal.style.display = 'none'; 
+        }
+    }
+</script>
+
+<!-- ฟังก์ชันการจัดการข้อมูลและบันทึกคะแนน (เฉพาะอาจารย์) -->
+{% if role == 'teacher' %}
+<script>
+    async function manageData(type, action) {
+        let endpoint = type === 'student' ? '/api/manage_student' : '/api/manage_subject';
+        let payload = { action: action };
+        
+        if (type === 'student' && action === 'add') {
+            payload.stdId = document.getElementById('newStdId').value;
+            payload.fname = document.getElementById('newStdFName').value;
+            payload.lname = document.getElementById('newStdLName').value;
+            payload.dept_id = document.getElementById('newStdDept').value;
+            payload.level = document.getElementById('newStdLevel').value;
+            if(!payload.stdId || !payload.fname) return alert('กรุณากรอกข้อมูลให้ครบ');
+        } else if (type === 'student' && action === 'delete') {
+            payload.stdId = document.getElementById('delStdId').value;
+            if(!payload.stdId) return alert('กรุณาเลือกนักศึกษา');
+        } else if (type === 'subject' && action === 'add') {
+            payload.subjName = document.getElementById('newSubjName').value;
+            payload.dept_id = document.getElementById('newSubjDept').value;
+            payload.level = document.getElementById('newSubjLevel').value;
+            if(!payload.subjName) return alert('กรุณากรอกชื่อวิชา');
+        } else if (type === 'subject' && action === 'delete') {
+            payload.subjId = document.getElementById('delSubjId').value;
+            if(!payload.subjId) return alert('กรุณาเลือกวิชา');
+        }
+        
+        if(confirm(`ยืนยันการ${action === 'add' ? 'เพิ่ม' : 'ลบ'}ข้อมูลหรือไม่?`)) {
+            let res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            let result = await res.json();
+            if(result.success) {
+                alert('ดำเนินการสำเร็จ');
+                location.reload();
+            } else {
+                alert('เกิดข้อผิดพลาด');
+            }
+        }
+    }
+
+    async function saveData() {
+        let searchVal = document.getElementById('studentSearch').value;
+        let stdId = searchVal.split(' - ')[0]; 
+        if(!stdId) { alert('กรุณาเลือกนักศึกษา'); return; }
+
+        let scores = {};
+        {% for subj in subjects %}
+            let val_{{ subj.subjId }} = document.getElementById('input_{{ subj.subjId }}').value;
+            if(val_{{ subj.subjId }} !== '') {
+                if(val_{{ subj.subjId }} > 100 || val_{{ subj.subjId }} < 0) {
+                    alert('คะแนนต้องอยู่ระหว่าง 0 - 100 เท่านั้น!');
+                    return;
+                }
+                scores['{{ subj.subjId }}'] = parseInt(val_{{ subj.subjId }});
+            }
+        {% endfor %}
+
+        if(confirm('ยืนยันการบันทึกคะแนนหรือไม่?')) {
+            let response = await fetch('/api/update_score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stdId: stdId, scores: scores })
+            });
+            
+            let result = await response.json();
+            if(result.success) {
+                alert('บันทึกข้อมูลสำเร็จ');
+                location.reload(); 
+            } else {
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            }
+        }
+    }
+</script>
+{% endif %}
+{% endblock %}

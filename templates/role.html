@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>เข้าสู่ระบบ - ระบบบันทึกคะแนน</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { text-align: center; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #fdfdfd; }
+        .btn { display: block; width: 250px; padding: 15px; margin: 15px auto; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; color: #333; transition: 0.3s; }
+        .btn-student { background-color: #e0f2f1; }
+        .btn-teacher { background-color: #a8e6cf; font-weight: bold; }
+        .btn:hover { filter: brightness(0.95); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>กรุณาเลือกสถานะของคุณ</h2>
+        <a href="/set_student_role" class="btn btn-student">👨‍🎓 นักศึกษา</a>
+        <a href="/login" class="btn btn-teacher">👩‍🏫 อาจารย์</a>
+    </div>
+</body>
+</html>
